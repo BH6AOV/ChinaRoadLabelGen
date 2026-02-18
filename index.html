@@ -2,100 +2,59 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>中国路牌生成器 - GB 5768.2-2022 标准版</title>
+    <title>中国道路交通标志生成器 - GB 5768.2 标准版</title>
     <link rel="stylesheet" href="./src/css/style.css">
-    <link id="template-link" rel="stylesheet" href="./src/template/speed-limit.css">
-    
-    <style>
-        /* 核心布局复位 */
-        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
-        .container { width: 100%; max-width: 900px; }
-        .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        
-        /* 选项卡样式 */
-        .tabs-primary { display: flex; background: #ddd; padding: 4px; border-radius: 8px; margin-bottom: 10px; }
-        .tab-item { flex: 1; padding: 10px; border: none; background: transparent; cursor: pointer; font-weight: bold; border-radius: 6px; }
-        .tab-item.active { background: #fff; color: #003399; }
-        
-        .tabs-secondary, .tabs-tertiary { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-        .sub-tab, .tri-tab { padding: 5px 15px; border: 1px solid #ccc; background: #fff; border-radius: 15px; cursor: pointer; font-size: 13px; }
-        .sub-tab.active, .tri-tab.active { background: #333; color: #fff; border-color: #333; }
-        
-        .hidden { display: none !important; }
-
-        /* 输入框样式 */
-        .input-group { display: flex; gap: 10px; }
-        .input-speed { 
-            font-family: 'RoadGen-A', sans-serif; 
-            font-size: 24px; width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 8px; text-align: center; outline: none; box-sizing: border-box;
-        }
-        /* 省份简称输入框宽度设窄 */
-        #provInput { flex: 0 0 80px; } 
-        
-        /* 画布预览区 */
-        #mainCanvas { 
-            display: block; margin: 0 auto; max-width: 100%; 
-            background-image: linear-gradient(45deg, #f9f9f9 25%, transparent 25%), linear-gradient(-45deg, #f9f9f9 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f9f9f9 75%), linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
-            background-size: 20px 20px; border: 1px solid #eee; 
-        }
-
-        /* 导出按钮容器 */
-        .export-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: center; }
-        .btn-save { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; }
-        .btn-png { background: #003399; }
-        .btn-svg { background: #555; }
-        .btn-save:hover { opacity: 0.8; }
-
-        /* 字体本地引用 */
-        @font-face { font-family: 'RoadGen-A'; src: url('./src/fonts/Atype.ttf'); }
-        @font-face { font-family: 'RoadGen-B'; src: url('./src/fonts/Btype.ttf'); }
-        @font-face { font-family: 'RoadGen-C'; src: url('./src/fonts/Ctype.ttf'); }
-    </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="tabs-primary">
-        <button class="tab-item active" onclick="window.changeMainTab('speed-limit', this)">限速标识</button>
-        <button class="tab-item" onclick="window.changeMainTab('road-name', this)">道路名牌</button>
-    </div>
-
-    <div id="nav-speed" class="tabs-secondary">
-        <button class="sub-tab active" onclick="window.changeSubTab('limit', this)">限速标志 (禁 39)</button>
-        <button class="sub-tab" onclick="window.changeSubTab('release', this)">取消限速 (禁 40)</button>
-        <button class="sub-tab" onclick="window.changeSubTab('minimum', this)">最低限速 (示 14)</button>
-    </div>
-
-    <div id="nav-road" class="tabs-secondary hidden">
-        <button class="sub-tab" onclick="window.changeSubTab('hwy-id', this)">高速公路编号标志</button>
-        <button class="sub-tab" onclick="window.changeSubTab('hwy-name', this)">高速公路命名编号标志</button>
-    </div>
-
-    <div id="nav-tertiary" class="tabs-tertiary hidden">
-        <button class="tri-tab active" onclick="window.changeTriTab('national', this)">国家高速</button>
-        <button class="tri-tab" onclick="window.changeTriTab('provincial', this)">省级高速</button>
-    </div>
-
-    <div class="card">
-        <canvas id="mainCanvas"></canvas>
-    </div>
-
-    <div class="card">
-        <label id="inputLabel" style="display:block; margin-bottom:10px; color:#666; font-size:14px;">请输入数值：</label>
-        <div class="input-group">
-            <input type="text" id="provInput" placeholder="皖" class="input-speed hidden" maxlength="1">
-            <input type="text" id="mainInput" placeholder="120" class="input-speed">
-            <input type="text" id="subInput" placeholder="角标" class="input-speed hidden">
-        </div>
+<div class="app-container">
+    <!-- 一级侧边栏导航 -->
+    <aside class="nav-l1">
+        <div class="logo">GB 5768-2022</div>
+        <nav id="menu-l1">
+            <button class="nav-item active" onclick="app.setL1('prohibition')">禁令标识</button>
+            <button class="nav-item" onclick="app.setL1('mandatory')">指示标识</button>
+            <button class="nav-item" onclick="app.setL1('highway')">高速标识</button>
+        </nav>
         
-        <div class="export-actions">
-            <button id="savePng" class="btn-save btn-png">保存透明底 PNG</button>
-            <button id="saveSvg" class="btn-save btn-svg">保存 SVG 文件</button>
+        <div class="font-monitor">
+            <div id="f-stat-A">Atype: <span>等待</span></div>
+            <div id="f-stat-B">Btype: <span>等待</span></div>
+            <div id="f-stat-C">Ctype: <span>等待</span></div>
         </div>
-    </div>
+    </aside>
+
+    <main class="app-content">
+        <!-- 多级顶部导航 -->
+        <header class="nav-top">
+            <div class="nav-menus">
+                <div id="menu-l2" class="tabs-l2"></div>
+                <div id="menu-l3" class="tabs-l3"></div>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-outline" onclick="app.exportPNG()">保存透明 PNG</button>
+                <button class="btn btn-primary" onclick="app.exportSVG()">保存矢量 SVG</button>
+            </div>
+        </header>
+
+        <div class="workspace">
+            <section class="viewer">
+                <div class="canvas-holder">
+                    <canvas id="mainCanvas"></canvas>
+                </div>
+            </section>
+
+            <aside class="editor">
+                <div class="panel-title">属性设置</div>
+                <div id="editor-fields" class="panel-body"></div>
+                <button class="btn btn-block" onclick="app.render()">手动刷新渲染</button>
+            </aside>
+        </div>
+    </main>
 </div>
 
+<script src="./src/template/speed-limit.js"></script>
+<script src="./src/template/highway.js"></script>
 <script src="./src/js/generator.js"></script>
 </body>
 </html>

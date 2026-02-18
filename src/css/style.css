@@ -1,18 +1,56 @@
-/* GB 5768.2-2022 限速标识标准模板 (120km/h 规格) */
 :root {
-    /* 物理尺寸基准 (单位: px, 1px = 1mm) */
-    --canvas-size: 1220;           /* D(1200mm) + 2*c(10mm) */
-    --sign-diameter: 1200;         /* 标志外径 D = 120cm */
-    --red-ring-width: 120;         /* 红边宽度 a = 12cm (0.1D) */
-    --edge-white-width: 10;        /* 衬边宽度 c = 1cm */
-    
-    /* 文字参数 (根据表 3，120km/h 对应 h = 600-700mm) */
-    --font-height: 700;            /* 取上限 70cm 以保证高速识认 */
-    --font-offset-y: 25;           /* 视觉垂直中心修正 */
-    
-    /* 标准色值 */
-    --gb-red: #E60012;             /* 禁令红 */
-    --gb-white: #FFFFFF;
-    --gb-black: #000000;
-    --gb-blue: #003399;            /* 指示蓝 */
+    --bg-dark: #1e222d;
+    --bg-light: #f5f7fa;
+    --primary: #0052d9;
+    --border: #dcdfe6;
 }
+
+@font-face { font-family: 'RoadGen-A'; src: url('../fonts/Atype.ttf'); }
+@font-face { font-family: 'RoadGen-B'; src: url('../fonts/Btype.ttf'); }
+@font-face { font-family: 'RoadGen-C'; src: url('../fonts/Ctype.ttf'); }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: sans-serif; height: 100vh; overflow: hidden; background: var(--bg-light); }
+
+.app-container { display: flex; height: 100vh; }
+
+.nav-l1 { width: 200px; background: var(--bg-dark); color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
+.logo { padding: 25px; font-weight: bold; font-size: 18px; color: var(--primary); border-bottom: 1px solid #333; }
+.nav-item { width: 100%; padding: 15px 25px; border: none; background: transparent; color: #a8abb2; text-align: left; cursor: pointer; transition: 0.2s; }
+.nav-item.active { background: var(--primary); color: #fff; }
+
+.font-monitor { padding: 20px; background: rgba(0,0,0,0.3); font-size: 11px; margin-top: auto; }
+.font-monitor div { margin-bottom: 5px; display: flex; justify-content: space-between; }
+.status-ok { color: #52c41a; font-weight: bold; }
+.status-wait { color: #faad14; }
+
+.app-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.nav-top { background: #fff; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 10px 20px; gap: 20px; }
+.nav-menus { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+
+.tabs-l2, .tabs-l3 { display: flex; gap: 10px; }
+.tab-l2 { padding: 6px 15px; border-radius: 15px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 13px; }
+.tab-l2.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+.tab-l3 { padding: 4px 12px; border: none; background: #f0f2f5; cursor: pointer; font-size: 12px; border-radius: 4px; color: #666; }
+.tab-l3.active { background: #333; color: #fff; }
+
+.header-actions { display: flex; gap: 10px; }
+
+.workspace { flex: 1; display: flex; overflow: hidden; }
+.viewer { flex: 1; display: flex; align-items: center; justify-content: center; background: #e2e8f0; padding: 30px; overflow: hidden; }
+.canvas-holder { background: #fff; padding: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 100%; max-height: 100%; display: flex; align-items: center; justify-content: center; }
+#mainCanvas { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; }
+
+.editor { width: 280px; background: #fff; border-left: 1px solid var(--border); padding: 20px; flex-shrink: 0; overflow-y: auto; }
+.panel-title { font-weight: bold; margin-bottom: 20px; }
+.control-group { margin-bottom: 15px; }
+.control-group label { display: block; font-size: 12px; color: #666; margin-bottom: 6px; }
+.control-group input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px; outline: none; }
+
+.btn { padding: 8px 16px; border-radius: 4px; cursor: pointer; border: none; font-weight: 500; transition: 0.2s; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-outline { background: #fff; border: 1px solid var(--border); color: #666; }
+.btn-block { width: 100%; background: #eee; margin-top: 10px; }
+
+.hidden { display: none !important; }

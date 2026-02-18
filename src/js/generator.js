@@ -1,316 +1,205 @@
 /**
- * 完整脚本：修复字体加载失效及映射错误问题
+ * 中国道路交通标志生成器 - 核心引擎
+ * 更新：同步标准色彩 (Green: 45,155,71; Red: 238,41,45)
  */
-const canvas = document.getElementById('mainCanvas');
-const ctx = canvas.getContext('2d');
-const provInput = document.getElementById('provInput');
-const mainInput = document.getElementById('mainInput');
-const subInput = document.getElementById('subInput'); 
-const inputLabel = document.getElementById('inputLabel');
-const savePngBtn = document.getElementById('savePng');
-const saveSvgBtn = document.getElementById('saveSvg');
 
-let currentMain = 'speed-limit';
-let currentSub = 'limit';
-let currentTri = 'national'; 
+const app = {
+    canvas: null,
+    ctx: null,
+    state: { l1: 'prohibition', l2: 'limit', l3: 'default' },
+    baseSize: 800,
 
-const inputStorage = {
-    'speed-limit': '120',
-    'road-name-main': 'G4',
-    'road-name-sub': '',
-    'road-name-prov': '皖'
-};
+    fonts: {
+        'RoadGen-A': { url: './src/fonts/Atype.ttf', loaded: false },
+        'RoadGen-B': { url: './src/fonts/Btype.ttf', loaded: false },
+        'RoadGen-C': { url: './src/fonts/Ctype.ttf', loaded: false }
+    },
 
-const getV = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    colors: {
+        red: 'rgb(238, 41, 45)',    // 精确修正红
+        white: '#FFFFFF',
+        black: '#000000',
+        blue: '#003399',
+        green: 'rgb(45, 155, 71)',  // 精确修正绿
+        yellow: '#FFD100'
+    },
 
-// 辅助函数：确保在字体加载后再绘制
-function safeDraw() {
-    if (document.fonts) {
-        document.fonts.ready.then(() => {
-            requestAnimationFrame(draw);
+    registry: {
+        prohibition: { name: "禁令标识", items: {} },
+        mandatory: { name: "指示标识", items: {} },
+        highway: { name: "高速标识", items: {} }
+    },
+
+    init() {
+        this.canvas = document.getElementById('mainCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        if (window.SpeedLimitTemplates) this.registry.prohibition.items = window.SpeedLimitTemplates;
+        if (window.HighwayTemplates) this.registry.highway.items = window.HighwayTemplates;
+        this.loadFonts();
+        this.setL1('prohibition');
+    },
+
+    loadFonts() {
+        Object.keys(this.fonts).forEach(key => {
+            const font = this.fonts[key];
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', font.url, true);
+            xhr.responseType = 'arraybuffer';
+            xhr.onload = async () => {
+                if (xhr.status === 200) {
+                    try {
+                        const fontFace = new FontFace(key, xhr.response);
+                        await fontFace.load();
+                        document.fonts.add(fontFace);
+                        font.loaded = true;
+                        this.updateFontUI(key, "OK", "ok");
+                        this.render();
+                    } catch (err) { this.updateFontUI(key, "失败", "fail"); }
+                }
+            };
+            xhr.send();
         });
-    } else {
-        draw();
-    }
-}
+    },
 
-function draw() {
-    const val = mainInput.value;
-    const extraVal = subInput ? subInput.value : ""; 
-    const provVal = provInput ? provInput.value : "皖";
-    const D = parseFloat(getV('--sign-diameter')) || 600;
+    updateFontUI(key, text, className) {
+        const id = key.split('-')[1];
+        const el = document.querySelector(`#f-stat-${id} span`);
+        if(el) { el.innerText = text; if(className) el.className = className; }
+    },
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setL1(key) {
+        this.state.l1 = key;
+        const l2Items = this.registry[key].items;
+        this.setL2(Object.keys(l2Items)[0] || '');
+    },
 
-    if (currentMain === 'speed-limit') {
-        canvas.width = D + 20;
-        canvas.height = D + 20;
-        renderSpeedSigns(val || '120', canvas.width/2, D);
-    } else if (currentMain === 'road-name') {
-        const totalLen = (val || 'G4').length + (extraVal ? extraVal.length : 0);
-        let aspect = 1.0;
-        if (totalLen >= 4) aspect = 1.7;
-        else if (totalLen >= 3) aspect = 1.25;
-        
-        const rectW = D * aspect;
-        const rectH = D;
-        canvas.width = rectW + 40;
-        canvas.height = rectH + 40;
-        
-        if (currentSub === 'hwy-id') {
-            renderHwyId(provVal, val || (currentTri === 'national' ? 'G4' : 'S1'), extraVal, canvas.width/2, canvas.height/2, rectW, rectH);
+    setL2(key) {
+        this.state.l2 = key;
+        const item = this.registry[this.state.l1].items[key];
+        if (item && item.items) {
+            this.setL3(Object.keys(item.items)[0]);
+        } else {
+            this.setL3('default');
         }
+    },
+
+    setL3(key) {
+        this.state.l3 = key;
+        this.renderMenus();
+        this.renderEditor();
+        this.render();
+    },
+
+    renderMenus() {
+        document.querySelectorAll('.nav-item').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('onclick').includes(`'${this.state.l1}'`));
+        });
+
+        const l2Nav = document.getElementById('menu-l2');
+        l2Nav.innerHTML = '';
+        const l2Items = this.registry[this.state.l1].items;
+        Object.keys(l2Items).forEach(key => {
+            const btn = document.createElement('button');
+            btn.className = `tab-l2 ${this.state.l2 === key ? 'active' : ''}`;
+            btn.innerText = l2Items[key].name;
+            btn.onclick = () => this.setL2(key);
+            l2Nav.appendChild(btn);
+        });
+
+        const l3Nav = document.getElementById('menu-l3');
+        l3Nav.innerHTML = '';
+        const currentL2Item = l2Items[this.state.l2];
+        if (currentL2Item && currentL2Item.items) {
+            Object.keys(currentL2Item.items).forEach(key => {
+                const btn = document.createElement('button');
+                btn.className = `tab-l3 ${this.state.l3 === key ? 'active' : ''}`;
+                btn.innerText = currentL2Item.items[key].name;
+                btn.onclick = () => this.setL3(key);
+                l3Nav.appendChild(btn);
+            });
+        }
+    },
+
+    renderEditor() {
+        const container = document.getElementById('editor-fields');
+        container.innerHTML = '';
+        const item = this.getCurrentItem();
+        if(!item) return;
+        item.fields.forEach(f => {
+            const group = document.createElement('div');
+            group.className = 'control-group';
+            group.innerHTML = `<label>${f.label}</label><input type="${f.type}" id="${f.id}" placeholder="${f.default}">`;
+            group.querySelector('input').oninput = () => this.render();
+            container.appendChild(group);
+        });
+    },
+
+    getCurrentItem() {
+        const l2Obj = this.registry[this.state.l1].items[this.state.l2];
+        if (!l2Obj) return null;
+        if (this.state.l3 === 'default') return l2Obj;
+        return l2Obj.items ? l2Obj.items[this.state.l3] : l2Obj;
+    },
+
+    render() {
+        const item = this.getCurrentItem();
+        if(!item || !this.ctx) return;
+        const params = {};
+        item.fields.forEach(f => {
+            const el = document.getElementById(f.id);
+            params[f.id] = (el && el.value !== "") ? el.value : f.default;
+        });
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        item.draw(this.ctx, this.canvas, params, this);
+    },
+
+    utils: {
+        circle(ctx, x, y, r, color) {
+            ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+            ctx.fillStyle = color; ctx.fill();
+        },
+        text(ctx, txt, x, y, size, color, font) {
+            ctx.font = `bold ${size}px "${font}", sans-serif`;
+            ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(txt, x, y);
+        },
+        drawRoundedRect(ctx, x, y, w, h, r, color) {
+            ctx.beginPath(); ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y); ctx.arcTo(x+w, y, x+w, y+r, r);
+            ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+            ctx.lineTo(x+r, y+h); ctx.arcTo(x, y+h, x, y+h-r, r); ctx.lineTo(x, y+r); ctx.arcTo(x, y, x+r, y, r);
+            ctx.fillStyle = color; ctx.fill();
+        },
+        strokeRoundedRect(ctx, x, y, w, h, r) {
+            ctx.beginPath(); ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y); ctx.arcTo(x+w, y, x+w, y+r, r);
+            ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+            ctx.lineTo(x+r, y+h); ctx.arcTo(x, y+h, x, y+h-r, r); ctx.lineTo(x, y+r); ctx.arcTo(x, y, x+r, y, r);
+            ctx.stroke();
+        }
+    },
+
+    exportPNG() {
+        const link = document.createElement('a');
+        link.download = `PNG-${Date.now()}.png`;
+        link.href = this.canvas.toDataURL();
+        link.click();
+    },
+
+    exportSVG() {
+        const item = this.getCurrentItem();
+        const params = {};
+        item.fields.forEach(f => {
+            const el = document.getElementById(f.id);
+            params[f.id] = (el && el.value !== "") ? el.value : f.default;
+        });
+        const total = this.canvas.width;
+        const svgContent = item.toSVG ? item.toSVG(params, this) : "";
+        const svgFull = `<svg xmlns="http://www.w3.org/2000/svg" width="${total}" height="${total}" viewBox="0 0 ${total} ${total}"><style>@font-face { font-family: 'RoadGen-A'; src: local('RoadGen-A'); }</style>${svgContent}</svg>`;
+        const blob = new Blob([svgFull], {type: 'image/svg+xml;charset=utf-8'});
+        const link = document.createElement('a');
+        link.download = `SVG-${Date.now()}.svg`;
+        link.href = URL.createObjectURL(blob);
+        link.click();
     }
-}
-
-function renderHwyId(prov, mainVal, subVal, cx, cy, w, h) {
-    const unit = h / 100; 
-    const r = 12 * unit;  
-    const padding = 3 * unit; 
-    const borderWidth = 2 * unit; 
-    const hwyGreen = "rgb(45, 155, 71)"; 
-    
-    const isNational = currentTri === 'national';
-    const headerBg = isNational ? (getV('--gb-red') || "#e60012") : "rgb(255, 210, 0)";
-    const headerTextColor = isNational ? "#FFFFFF" : "#000000";
-    
-    const headerTextStr = isNational ? ["国", "家", "高", "速"] : [(prov || "皖"), "高", "速"];
-
-    const innerX = cx - w/2 + padding;
-    const innerY = cy - h/2 + padding;
-    const innerW = w - 2*padding;
-    const innerH = h - 2*padding;
-
-    drawRoundedRect(innerX, innerY, innerW, innerH, r, hwyGreen);
-
-    const headerH = 20 * unit; 
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(innerX + r, innerY);
-    ctx.lineTo(innerX + innerW - r, innerY);
-    ctx.arcTo(innerX + innerW, innerY, innerX + innerW, innerY + r, r);
-    ctx.lineTo(innerX + innerW, innerY + headerH); 
-    ctx.lineTo(innerX, innerY + headerH);
-    ctx.lineTo(innerX, innerY + r);
-    ctx.arcTo(innerX, innerY, innerX + r, innerY, r);
-    ctx.closePath();
-    ctx.fillStyle = headerBg;
-    ctx.fill();
-    ctx.restore();
-
-    ctx.strokeStyle = "#FFFFFF";
-    ctx.lineWidth = borderWidth;
-    ctx.stroke();
-
-    // 1. 顶部汉字：严格使用 RoadGen-A
-    const charSize = 10 * unit;
-    const charGap = isNational ? 10 * unit : 15 * unit; 
-    ctx.fillStyle = headerTextColor;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = `bold ${charSize}px "RoadGen-A"`;
-    
-    const textY = innerY + (headerH / 2); 
-    const totalHeaderWidth = (headerTextStr.length - 1) * (charSize + charGap);
-    const startX = cx - totalHeaderWidth / 2;
-    
-    headerTextStr.forEach((char, i) => {
-        ctx.fillText(char, startX + i * (charSize + charGap), textY);
-    });
-
-    // 2. 中间编号：严格使用 RoadGen-B
-    const mainFontSize = 45 * unit;
-    const subFontSize = 27 * unit; 
-    const interGap = 2 * unit; 
-
-    ctx.font = `bold ${mainFontSize}px "RoadGen-B"`;
-    const mainWidth = ctx.measureText(mainVal).width;
-    let totalContentWidth = mainWidth;
-    let subWidth = 0;
-    if (subVal) {
-        ctx.font = `bold ${subFontSize}px "RoadGen-B"`;
-        subWidth = ctx.measureText(subVal).width;
-        totalContentWidth += interGap + subWidth;
-    }
-
-    let drawX = cx - totalContentWidth / 2;
-    const baselineY = innerY + headerH + ((innerH - headerH) / 2) + (mainFontSize * 0.35);
-
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic'; 
-    ctx.fillStyle = "#FFFFFF";
-    
-    // 再次显式设置字体防止丢失
-    ctx.font = `bold ${mainFontSize}px "RoadGen-B"`;
-    ctx.fillText(mainVal, drawX, baselineY);
-
-    if (subVal) {
-        ctx.font = `bold ${subFontSize}px "RoadGen-B"`;
-        ctx.fillText(subVal, drawX + mainWidth + interGap, baselineY);
-    }
-}
-
-function drawRoundedRect(x, y, w, h, r, color) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.arcTo(x + w, y, x + w, y + r, r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-    ctx.lineTo(x + r, y + h);
-    ctx.arcTo(x, y + h, x, y + h - r, r);
-    ctx.lineTo(x, y + r);
-    ctx.arcTo(x, y, x + r, y, r);
-    ctx.closePath();
-    ctx.fillStyle = color;
-    ctx.fill();
-}
-
-function renderSpeedSigns(val, center, D) {
-    const a = parseFloat(getV('--red-ring-width')) || 60;
-    let h = parseFloat(getV('--font-height')) || 250;
-    const visualBias = - (D * 0.025);
-
-    // 限速数字属于非汉字，使用 RoadGen-B
-    const speedFont = "RoadGen-B";
-
-    if (currentSub === 'limit') {
-        if (val.length >= 3) h *= 0.72; else h *= 0.92;
-        drawCircle(center, center, D/2, getV('--gb-white'));
-        drawCircle(center, center, D/2, getV('--gb-red'));
-        drawCircle(center, center, (D/2) - a, getV('--gb-white'));
-        drawLabelText(val, center, center + visualBias, h, "#000000", speedFont);
-    } 
-    else if (currentSub === 'release') {
-        if (val.length >= 3) h *= 0.72; else h *= 0.92;
-        drawCircle(center, center, D/2, getV('--gb-white'));
-        ctx.beginPath(); ctx.arc(center, center, D/2 - a/2, 0, Math.PI * 2);
-        ctx.strokeStyle = "#000000"; ctx.lineWidth = a; ctx.stroke();
-        drawLabelText(val, center, center + visualBias, h, "#000000", speedFont);
-        drawReleaseStrikes(center, center, (D/2) - a);
-    }
-    else if (currentSub === 'minimum') {
-        if (val.length >= 3) h *= 0.75; else h *= 0.95;
-        drawCircle(center, center, D/2, getV('--gb-blue'));
-        const offsetRatio = 0.5; const angle = Math.asin(offsetRatio);
-        ctx.save(); ctx.beginPath(); ctx.arc(center, center, D/2, angle, Math.PI - angle, false); ctx.closePath();
-        ctx.fillStyle = "#FFFFFF"; ctx.fill(); ctx.restore();
-        drawLabelText(val, center, center + visualBias, h, "#FFFFFF", speedFont);
-    }
-}
-
-function drawCircle(x, y, r, color) {
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = color; ctx.fill();
-}
-
-function drawLabelText(txt, x, y, size, color, font) {
-    ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = `bold ${size}px "${font}"`;
-    ctx.fillText(txt, x, y);
-}
-
-function drawReleaseStrikes(x, y, r) {
-    ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.clip();
-    ctx.strokeStyle = "#000000"; ctx.lineWidth = 7;
-    const spacing = 20; const lineCount = 5;
-    for (let i = 0; i < lineCount; i++) {
-        const offset = -(4 * spacing) / 2 + (i * spacing);
-        ctx.beginPath(); ctx.moveTo(x - r * 1.5 + offset, y + r * 1.5 + offset);
-        ctx.lineTo(x + r * 1.5 + offset, y - r * 1.5 + offset); ctx.stroke();
-    }
-    ctx.restore();
-}
-
-window.changeMainTab = (category, el) => {
-    if (currentMain === 'speed-limit') {
-        inputStorage['speed-limit'] = mainInput.value;
-    } else {
-        inputStorage['road-name-main'] = mainInput.value;
-        inputStorage['road-name-sub'] = subInput.value;
-        inputStorage['road-name-prov'] = provInput.value;
-    }
-
-    currentMain = category;
-    document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
-    el.classList.add('active');
-    
-    const navSpeed = document.getElementById('nav-speed');
-    const navRoad = document.getElementById('nav-road');
-    const navTri = document.getElementById('nav-tertiary');
-    
-    if (category === 'speed-limit') {
-        navSpeed.classList.remove('hidden'); navRoad.classList.add('hidden'); navTri.classList.add('hidden');
-        provInput.classList.add('hidden');
-        subInput.classList.add('hidden');
-        inputLabel.innerText = "请输入数值：";
-        mainInput.value = inputStorage['speed-limit'];
-        currentSub = 'limit';
-    } else {
-        navSpeed.classList.add('hidden'); navRoad.classList.remove('hidden'); navTri.classList.remove('hidden');
-        currentSub = 'hwy-id';
-        const hwyIdBtn = Array.from(document.querySelectorAll('.sub-tab')).find(b => b.textContent.includes('编号标志'));
-        document.querySelectorAll('.sub-tab').forEach(b => b.classList.remove('active'));
-        if(hwyIdBtn) hwyIdBtn.classList.add('active');
-        updateRoadInputUI();
-        subInput.classList.remove('hidden');
-        mainInput.value = inputStorage['road-name-main'];
-        subInput.value = inputStorage['road-name-sub'];
-        provInput.value = inputStorage['road-name-prov'];
-    }
-    safeDraw();
 };
 
-window.changeSubTab = (type, el) => {
-    currentSub = type;
-    document.querySelectorAll('.sub-tab').forEach(b => b.classList.remove('active'));
-    el.classList.add('active');
-    safeDraw();
-};
-
-window.changeTriTab = (level, el) => {
-    currentTri = level;
-    document.querySelectorAll('.tri-tab').forEach(b => b.classList.remove('active'));
-    el.classList.add('active');
-    updateRoadInputUI();
-    if (mainInput.value === 'G4' || mainInput.value === 'S1' || !mainInput.value) {
-        mainInput.value = level === 'national' ? 'G4' : 'S1';
-    }
-    safeDraw();
-};
-
-function updateRoadInputUI() {
-    if (currentMain !== 'road-name') return;
-    if (currentTri === 'national') {
-        provInput.classList.add('hidden');
-        inputLabel.innerText = "请输入编号与角标：";
-    } else {
-        provInput.classList.remove('hidden');
-        inputLabel.innerText = "请输入省简称、编号与角标：";
-    }
-}
-
-function saveAsPNG() {
-    const link = document.createElement('a');
-    link.download = `sign-${Date.now()}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-}
-
-function saveAsSVG() {
-    const svgData = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}"><image href="${canvas.toDataURL('image/png')}" width="${canvas.width}" height="${canvas.height}" /></svg>`;
-    const blob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
-    const link = document.createElement('a');
-    link.download = `sign-${Date.now()}.svg`;
-    link.href = URL.createObjectURL(blob);
-    link.click();
-}
-
-provInput.addEventListener('input', safeDraw);
-mainInput.addEventListener('input', safeDraw);
-subInput.addEventListener('input', safeDraw);
-savePngBtn.addEventListener('click', saveAsPNG);
-saveSvgBtn.addEventListener('click', saveAsSVG);
-
-// 页面加载启动字体监听
-window.onload = safeDraw;
+window.onload = () => app.init();
