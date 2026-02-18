@@ -1,0 +1,18 @@
+/* 限速类标识视觉规范模板 */
+:root {
+    /* 几何比例 */
+    --sign-size: 600;              /* 逻辑参考尺寸 */
+    --red-ring-ratio: 0.1;         /* 红圈宽度占直径比例 (GB 5768.2) */
+    --inner-white-ratio: 0.8;      /* 内圆白底占比 */
+    
+    /* 标准色彩 */
+    --color-gb-red: #E60012;       /* 禁令标志红 */
+    --color-gb-white: #FFFFFF;     /* 底色白 */
+    --color-gb-black: #000000;     /* 文字黑 */
+    --color-gb-blue: #003399;      /* 指示标志蓝 */
+    
+    /* 文字参数 */
+    --speed-font-family: 'RoadGen-A';
+    --speed-font-size: 240px;
+    --speed-font-offset-y: 20px;   /* 视觉垂直居中微调 */
+}

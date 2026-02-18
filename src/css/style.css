@@ -1,0 +1,18 @@
+/* GB 5768.2-2022 限速标识标准模板 (120km/h 规格) */
+:root {
+    /* 物理尺寸基准 (单位: px, 1px = 1mm) */
+    --canvas-size: 1220;           /* D(1200mm) + 2*c(10mm) */
+    --sign-diameter: 1200;         /* 标志外径 D = 120cm */
+    --red-ring-width: 120;         /* 红边宽度 a = 12cm (0.1D) */
+    --edge-white-width: 10;        /* 衬边宽度 c = 1cm */
+    
+    /* 文字参数 (根据表 3，120km/h 对应 h = 600-700mm) */
+    --font-height: 700;            /* 取上限 70cm 以保证高速识认 */
+    --font-offset-y: 25;           /* 视觉垂直中心修正 */
+    
+    /* 标准色值 */
+    --gb-red: #E60012;             /* 禁令红 */
+    --gb-white: #FFFFFF;
+    --gb-black: #000000;
+    --gb-blue: #003399;            /* 指示蓝 */
+}
