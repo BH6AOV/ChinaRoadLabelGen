@@ -1,13 +1,14 @@
 /**
  * 中国道路交通标志生成器 - 核心引擎
- * 更新：同步标准色彩 (Green: 45,155,71; Red: 238,41,45)
+ * 优化：提升至 2000px 高清分辨率，移除伪粗体以解决文字模糊问题
  */
 
 const app = {
     canvas: null,
     ctx: null,
     state: { l1: 'prohibition', l2: 'limit', l3: 'default' },
-    baseSize: 800,
+    // 提升分辨率至 2000px，匹配 Photoshop 实验标准
+    baseSize: 2000,
 
     fonts: {
         'RoadGen-A': { url: './src/fonts/Atype.ttf', loaded: false },
@@ -16,25 +17,26 @@ const app = {
     },
 
     colors: {
-        red: 'rgb(238, 41, 45)',    // 精确修正红
+        red: 'rgb(238, 41, 45)',
         white: '#FFFFFF',
         black: '#000000',
         blue: '#003399',
-        green: 'rgb(45, 155, 71)',  // 精确修正绿
+        green: 'rgb(45, 155, 71)',
         yellow: '#FFD100'
     },
 
     registry: {
         prohibition: { name: "禁令标识", items: {} },
-        mandatory: { name: "指示标识", items: {} },
         highway: { name: "高速标识", items: {} }
     },
 
     init() {
         this.canvas = document.getElementById('mainCanvas');
         this.ctx = this.canvas.getContext('2d');
+        
         if (window.SpeedLimitTemplates) this.registry.prohibition.items = window.SpeedLimitTemplates;
         if (window.HighwayTemplates) this.registry.highway.items = window.HighwayTemplates;
+
         this.loadFonts();
         this.setL1('prohibition');
     },
@@ -149,7 +151,12 @@ const app = {
             const el = document.getElementById(f.id);
             params[f.id] = (el && el.value !== "") ? el.value : f.default;
         });
+        
+        // 清理并设置渲染环境
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.textSmoothingEnabled = true;
+        this.ctx.imageSmoothingEnabled = true;
+        
         item.draw(this.ctx, this.canvas, params, this);
     },
 
@@ -158,10 +165,19 @@ const app = {
             ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
             ctx.fillStyle = color; ctx.fill();
         },
+        circleOutline(ctx, x, y, r, lw, color) {
+            ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+            ctx.lineWidth = lw; ctx.strokeStyle = color; ctx.stroke();
+        },
+        // 核心修正：移除 "bold"，确保使用字体原始字形
         text(ctx, txt, x, y, size, color, font) {
-            ctx.font = `bold ${size}px "${font}", sans-serif`;
-            ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.save();
+            ctx.font = `${size}px "${font}", sans-serif`;
+            ctx.fillStyle = color; 
+            ctx.textAlign = 'center'; 
+            ctx.textBaseline = 'middle';
             ctx.fillText(txt, x, y);
+            ctx.restore();
         },
         drawRoundedRect(ctx, x, y, w, h, r, color) {
             ctx.beginPath(); ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y); ctx.arcTo(x+w, y, x+w, y+r, r);
@@ -174,29 +190,32 @@ const app = {
             ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
             ctx.lineTo(x+r, y+h); ctx.arcTo(x, y+h, x, y+h-r, r); ctx.lineTo(x, y+r); ctx.arcTo(x, y, x+r, y, r);
             ctx.stroke();
+        },
+        drawStrikes(ctx, cx, cy, r) {
+            ctx.save();
+            ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.clip();
+            ctx.strokeStyle = "#000"; ctx.lineWidth = r * 0.03;
+            const step = r * 0.12; ctx.translate(cx, cy); ctx.rotate(-45 * Math.PI / 180);
+            for(let i = -2; i <= 2; i++) {
+                ctx.beginPath(); ctx.moveTo(-r*2, i * step); ctx.lineTo(r*2, i * step); ctx.stroke();
+            }
+            ctx.restore();
         }
     },
 
     exportPNG() {
         const link = document.createElement('a');
-        link.download = `PNG-${Date.now()}.png`;
-        link.href = this.canvas.toDataURL();
+        link.download = `Sign-${Date.now()}.png`;
+        link.href = this.canvas.toDataURL('image/png');
         link.click();
     },
 
     exportSVG() {
-        const item = this.getCurrentItem();
-        const params = {};
-        item.fields.forEach(f => {
-            const el = document.getElementById(f.id);
-            params[f.id] = (el && el.value !== "") ? el.value : f.default;
-        });
         const total = this.canvas.width;
-        const svgContent = item.toSVG ? item.toSVG(params, this) : "";
-        const svgFull = `<svg xmlns="http://www.w3.org/2000/svg" width="${total}" height="${total}" viewBox="0 0 ${total} ${total}"><style>@font-face { font-family: 'RoadGen-A'; src: local('RoadGen-A'); }</style>${svgContent}</svg>`;
+        const svgFull = `<svg xmlns="http://www.w3.org/2000/svg" width="${total}" height="${this.canvas.height}"><image href="${this.canvas.toDataURL()}" width="100%" height="100%"/></svg>`;
         const blob = new Blob([svgFull], {type: 'image/svg+xml;charset=utf-8'});
         const link = document.createElement('a');
-        link.download = `SVG-${Date.now()}.svg`;
+        link.download = `Sign-${Date.now()}.svg`;
         link.href = URL.createObjectURL(blob);
         link.click();
     }

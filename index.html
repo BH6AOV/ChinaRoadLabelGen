@@ -13,10 +13,10 @@
         <div class="logo">GB 5768-2022</div>
         <nav id="menu-l1">
             <button class="nav-item active" onclick="app.setL1('prohibition')">禁令标识</button>
-            <button class="nav-item" onclick="app.setL1('mandatory')">指示标识</button>
             <button class="nav-item" onclick="app.setL1('highway')">高速标识</button>
         </nav>
         
+        <!-- 字体状态监控面板 -->
         <div class="font-monitor">
             <div id="f-stat-A">Atype: <span>等待</span></div>
             <div id="f-stat-B">Btype: <span>等待</span></div>
@@ -31,6 +31,7 @@
                 <div id="menu-l2" class="tabs-l2"></div>
                 <div id="menu-l3" class="tabs-l3"></div>
             </div>
+            <!-- 导出动作组 -->
             <div class="header-actions">
                 <button class="btn btn-outline" onclick="app.exportPNG()">保存透明 PNG</button>
                 <button class="btn btn-primary" onclick="app.exportSVG()">保存矢量 SVG</button>
@@ -38,12 +39,14 @@
         </header>
 
         <div class="workspace">
+            <!-- 中央预览区 -->
             <section class="viewer">
                 <div class="canvas-holder">
                     <canvas id="mainCanvas"></canvas>
                 </div>
             </section>
 
+            <!-- 右侧属性参数区 -->
             <aside class="editor">
                 <div class="panel-title">属性设置</div>
                 <div id="editor-fields" class="panel-body"></div>
@@ -53,8 +56,10 @@
     </main>
 </div>
 
+<!-- 引入分类模版 -->
 <script src="./src/template/speed-limit.js"></script>
 <script src="./src/template/highway.js"></script>
+<!-- 核心引擎 -->
 <script src="./src/js/generator.js"></script>
 </body>
 </html>
