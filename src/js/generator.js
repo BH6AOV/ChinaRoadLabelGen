@@ -152,6 +152,7 @@ const app = {
             params[f.id] = (el && el.value !== "") ? el.value : f.default;
         });
         
+        // 清理并设置渲染环境
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.textSmoothingEnabled = true;
         this.ctx.imageSmoothingEnabled = true;
@@ -168,20 +169,20 @@ const app = {
             ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
             ctx.lineWidth = lw; ctx.strokeStyle = color; ctx.stroke();
         },
-        // 核心修正：移除硬编码的 "bold"，确保汉字渲染不糊
-        text(ctx, txt, x, y, size, color, font, weight = 'normal') {
+        // 核心修正：移除硬编码的 "bold"，确保汉字按原始比例渲染，不再糊字
+        text(ctx, txt, x, y, size, color, font) {
             ctx.save();
-            ctx.font = `${weight} ${size}px "${font}", sans-serif`;
+            ctx.font = `${size}px "${font}", sans-serif`;
             ctx.fillStyle = color; 
             ctx.textAlign = 'center'; 
             ctx.textBaseline = 'middle';
             ctx.fillText(txt, x, y);
             ctx.restore();
         },
-        // 新增：两侧对齐渲染函数 (用于 ID 填充)
-        drawJustifiedText(ctx, txt, x, y, size, totalW, color, font, weight = 'normal') {
+        // 新增：支持两侧对齐的绘制工具
+        drawJustifiedText(ctx, txt, x, y, size, totalW, color, font) {
             ctx.save();
-            ctx.font = `${weight} ${size}px "${font}"`;
+            ctx.font = `${size}px "${font}"`;
             ctx.fillStyle = color;
             ctx.textBaseline = 'middle';
             const chars = txt.split("");
