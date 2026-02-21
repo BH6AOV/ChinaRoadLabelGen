@@ -152,7 +152,6 @@ const app = {
             params[f.id] = (el && el.value !== "") ? el.value : f.default;
         });
         
-        // 清理并设置渲染环境
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.textSmoothingEnabled = true;
         this.ctx.imageSmoothingEnabled = true;
@@ -169,14 +168,37 @@ const app = {
             ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
             ctx.lineWidth = lw; ctx.strokeStyle = color; ctx.stroke();
         },
-        // 核心修正：移除 "bold"，确保使用字体原始字形
-        text(ctx, txt, x, y, size, color, font) {
+        // 核心修正：移除硬编码的 "bold"，确保汉字渲染不糊
+        text(ctx, txt, x, y, size, color, font, weight = 'normal') {
             ctx.save();
-            ctx.font = `${size}px "${font}", sans-serif`;
+            ctx.font = `${weight} ${size}px "${font}", sans-serif`;
             ctx.fillStyle = color; 
             ctx.textAlign = 'center'; 
             ctx.textBaseline = 'middle';
             ctx.fillText(txt, x, y);
+            ctx.restore();
+        },
+        // 新增：两侧对齐渲染函数 (用于 ID 填充)
+        drawJustifiedText(ctx, txt, x, y, size, totalW, color, font, weight = 'normal') {
+            ctx.save();
+            ctx.font = `${weight} ${size}px "${font}"`;
+            ctx.fillStyle = color;
+            ctx.textBaseline = 'middle';
+            const chars = txt.split("");
+            if (chars.length <= 1) {
+                ctx.textAlign = 'center';
+                ctx.fillText(txt, x, y);
+            } else {
+                const charWidths = chars.map(c => ctx.measureText(c).width);
+                const sumWidth = charWidths.reduce((a, b) => a + b, 0);
+                const gap = (totalW - sumWidth) / (chars.length - 1);
+                let currentX = x - totalW / 2;
+                chars.forEach((c, i) => {
+                    ctx.textAlign = 'left';
+                    ctx.fillText(c, currentX, y);
+                    currentX += charWidths[i] + gap;
+                });
+            }
             ctx.restore();
         },
         drawRoundedRect(ctx, x, y, w, h, r, color) {

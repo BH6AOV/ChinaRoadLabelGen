@@ -1,13 +1,13 @@
 /**
  * 模版：高速公路标志库
- * 优化：移除所有 bold 声明
+ * 修复点：精简选单名称、缩小国家高速角标比例、收窄省级高速字符间距
  */
 window.HighwayTemplates = {
     national: {
         name: "国家高速",
         items: {
             id_only: {
-                name: "编号标识",
+                name: "编号标识", // 修复 4: 移除编号
                 fields: [
                     { id: 'hwyId', label: '高速编号 (如 G25)', type: 'text', default: 'G25' },
                     { id: 'subLabel', label: '线路角标 (如 01)', type: 'text', default: '' }
@@ -26,6 +26,7 @@ window.HighwayTemplates = {
                     ctx.lineTo(baseW, hH); ctx.lineTo(0, hH); ctx.lineTo(0, r); ctx.arcTo(0, 0, r, 0, r);
                     ctx.fillStyle = app.colors.red; ctx.fill(); ctx.restore();
 
+                    // 白色衬边紧贴画布边缘 (无外部留白)
                     ctx.save(); ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 1.5 * unit;
                     const off = 0.75 * unit;
                     app.utils.strokeRoundedRect(ctx, off, off, baseW - 1.5 * unit, baseH - 1.5 * unit, r - off);
@@ -37,33 +38,37 @@ window.HighwayTemplates = {
                         app.utils.text(ctx, char, charX, headY, headSize, "#FFFFFF", "RoadGen-A");
                     });
 
-                    let mainFS = 70 * unit; let subFS = mainFS * 0.6; let interGap = 2 * unit;
+                    let mainFS = 70 * unit; 
+                    // 修复 2: 脚标文字比例由 0.6 降至 0.5
+                    let subFS = mainFS * 0.5; 
+                    let interGap = 1.5 * unit; // 修复 3 对齐: 收窄间距
+
                     ctx.font = `${mainFS}px "RoadGen-B"`;
                     const mainW = ctx.measureText(mainVal).width;
-                    let totalW = mainW; let subW = 0;
+                    let subW = 0;
                     if (subVal) {
                         ctx.font = `${subFS}px "RoadGen-B"`;
                         subW = ctx.measureText(subVal).width;
-                        totalW += interGap + subW;
                     }
-
+                    
+                    const totalW = mainW + (subVal ? (interGap + subW) : 0);
                     const maxW = baseW * 0.88;
-                    if (totalW > maxW) {
-                        const scale = maxW / totalW;
-                        mainFS *= scale; subFS *= scale; totalW = maxW;
-                    }
+                    const scale = totalW > maxW ? maxW / totalW : 1.0;
+                    const finalMainW = mainW * scale;
+                    const finalSubW = subW * scale;
 
-                    const startX = (baseW - totalW) / 2;
-                    const mainY = 60 * unit + mainFS * 0.05;
-                    app.utils.text(ctx, mainVal, startX + (mainW * (totalW/totalW)) / 2, mainY, mainFS, "#FFFFFF", "RoadGen-B");
+                    const startX = (baseW - totalW * scale) / 2;
+                    const mainY = 60 * unit + (mainFS * scale) * 0.05;
+
+                    app.utils.text(ctx, mainVal, startX + finalMainW / 2, mainY, mainFS * scale, "#FFFFFF", "RoadGen-B");
                     if (subVal) {
-                        const subX = startX + (mainW * (totalW/(mainW + subW))) + interGap + subW/2;
-                        app.utils.text(ctx, subVal, subX, mainY + (mainFS - subFS) * 0.40, subFS, "#FFFFFF", "RoadGen-B");
+                        const subX = startX + finalMainW + interGap * scale + finalSubW / 2;
+                        app.utils.text(ctx, subVal, subX, mainY + (mainFS * scale - subFS * scale) * 0.40, subFS * scale, "#FFFFFF", "RoadGen-B");
                     }
                 }
             },
             name_id: {
-                name: "名称编号标识",
+                name: "名称编号标识", // 修复 4: 移除编号
                 fields: [
                     { id: 'hwyName', label: '高速名称', type: 'text', default: '宁洛高速' },
                     { id: 'hwyId', label: '高速编号', type: 'text', default: 'G36' },
@@ -78,7 +83,7 @@ window.HighwayTemplates = {
                     canvas.width = baseW; canvas.height = baseH;
 
                     app.utils.drawRoundedRect(ctx, 0, 0, baseW, baseH, r, app.colors.green);
-                    const bW = 3 * unit;
+                    const bW = 3 * unit; 
                     ctx.save(); ctx.beginPath();
                     ctx.moveTo(r, bW); ctx.lineTo(baseW - r, bW);
                     ctx.arcTo(baseW - bW, bW, baseW - bW, bW + r, r - bW);
@@ -90,38 +95,34 @@ window.HighwayTemplates = {
                     app.utils.strokeRoundedRect(ctx, 3 * unit, 3 * unit, baseW - 6 * unit, baseH - 6 * unit, r - 3 * unit);
                     ctx.restore();
 
-                    const headY = 13 * unit;
-                    "国家高速".split("").forEach((char, i) => {
-                        const charX = (baseW / 2) + (i - 1.5) * 22 * unit;
-                        app.utils.text(ctx, char, charX, headY, 10 * unit, "#FFFFFF", "RoadGen-A");
-                    });
+                    app.utils.text(ctx, "国家高速", baseW/2, 13*unit, 10*unit, "#FFFFFF", "RoadGen-A");
 
-                    const idY = 53.5 * unit;
-                    let mainFS = 55 * unit; let subFS = mainFS * 0.6;
+                    let mainFS = 55 * unit; let subFS = mainFS * 0.5; // 修复 2: 脚标缩小
                     ctx.font = `${mainFS}px "RoadGen-B"`;
                     const mWidth = ctx.measureText(mainVal).width;
-                    let totalIdW = mWidth + (subVal ? subFS * 1.5 : 0);
-                    const maxIdW = baseW - 30 * unit;
-                    if(totalIdW > maxIdW) {
-                        const s = maxIdW / totalIdW; mainFS *= s; subFS *= s; totalIdW = maxIdW;
-                    }
-
-                    const idStartX = (baseW - totalIdW) / 2;
-                    app.utils.text(ctx, mainVal, idStartX + mWidth/2, idY + mainFS*0.05, mainFS, "#FFFFFF", "RoadGen-B");
+                    let sWidth = 0;
                     if(subVal) {
-                        const subX = idStartX + mWidth + (2 * unit) + (ctx.measureText(subVal).width)/2;
-                        app.utils.text(ctx, subVal, subX, idY + (mainFS-subFS)*0.4 + mainFS*0.05, subFS, "#FFFFFF", "RoadGen-B");
+                        ctx.font = `${subFS}px "RoadGen-B"`;
+                        sWidth = ctx.measureText(subVal).width;
+                    }
+                    
+                    const totalIdW = mWidth + (subVal ? (2 * unit + sWidth) : 0);
+                    const maxIdW = baseW - 30 * unit;
+                    const idScale = totalIdW > maxIdW ? maxIdW / totalIdW : 1.0;
+
+                    const idStartX = (baseW - totalIdW * idScale) / 2;
+                    app.utils.text(ctx, mainVal, idStartX + (mWidth * idScale) / 2, 53.5 * unit + (mainFS * idScale) * 0.05, mainFS * idScale, "#FFFFFF", "RoadGen-B");
+                    if(subVal) {
+                        const subX = idStartX + (mWidth * idScale) + (2 * unit * idScale) + (sWidth * idScale) / 2;
+                        app.utils.text(ctx, subVal, subX, 53.5 * unit + (mainFS * idScale - subFS * idScale) * 0.40, subFS * idScale, "#FFFFFF", "RoadGen-B");
                     }
 
-                    const nameY = 93.5 * unit; const nameFS = 22 * unit; const nameChars = nameTxt.split("");
-                    let nameSpacing = 26 * unit;
-                    if(isLong) {
-                        const availableW = baseW - 30 * unit;
-                        nameSpacing = availableW / (nameChars.length - 1);
-                    }
+                    const nameChars = nameTxt.split("");
+                    // 修复 3 相关: 间距调小至 20 左右
+                    let nameSpacing = isLong ? (baseW - 40 * unit) / (nameChars.length - 1) : 20 * unit;
                     nameChars.forEach((char, i) => {
                         const charX = (baseW / 2) + (i - (nameChars.length - 1) / 2) * nameSpacing;
-                        app.utils.text(ctx, char, charX, nameY, nameFS, "#FFFFFF", "RoadGen-A");
+                        app.utils.text(ctx, char, charX, 93.5 * unit, 22 * unit, "#FFFFFF", "RoadGen-A");
                     });
                 }
             }
@@ -131,7 +132,7 @@ window.HighwayTemplates = {
         name: "省级高速",
         items: {
             id_only: {
-                name: "编号标识",
+                name: "编号标识", // 修复 4: 移除编号
                 fields: [
                     { id: 'prov', label: '省份简称', type: 'text', default: '苏' },
                     { id: 'hwyId', label: '高速编号 (如 S1)', type: 'text', default: 'S1' },
@@ -152,29 +153,99 @@ window.HighwayTemplates = {
                     ctx.fillStyle = app.colors.yellow; ctx.fill(); ctx.restore();
 
                     ctx.save(); ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 1.5 * unit;
-                    app.utils.strokeRoundedRect(ctx, 0.75*unit, 0.75*unit, baseW-1.5*unit, baseH-1.5*unit, r-0.75*unit);
+                    const off = 0.75 * unit;
+                    app.utils.strokeRoundedRect(ctx, off, off, baseW - 1.5 * unit, baseH - 1.5 * unit, r - off);
                     ctx.restore();
 
-                    const headY = 10 * unit;
                     [params.prov||'苏', "高", "速"].forEach((char, i) => {
                         const charX = (baseW / 2) + (i - 1) * 25 * unit;
-                        app.utils.text(ctx, char, charX, headY, 10 * unit, app.colors.black, "RoadGen-A");
+                        app.utils.text(ctx, char, charX, 10 * unit, 10 * unit, app.colors.black, "RoadGen-A");
                     });
 
-                    let mainFS = 70 * unit; let subFS = mainFS * 0.6;
+                    let mainFS = 70 * unit; let subFS = mainFS * 0.5; // 修复 2 对齐
+                    // 修复 3: 收窄间距，interGap 设为 1，且 maxW 阈值调低强制紧凑
+                    let interGap = 1 * unit;
                     ctx.font = `${mainFS}px "RoadGen-B"`;
                     const mainW = ctx.measureText(mainVal).width;
-                    let totalW = mainW + (subVal ? subFS * 1.5 : 0);
-                    const maxW = baseW * 0.88;
-                    if(totalW > maxW) {
-                        const s = maxW / totalW; mainFS *= s; subFS *= s; totalW = maxW;
+                    let subW = 0;
+                    if(subVal) {
+                        ctx.font = `${subFS}px "RoadGen-B"`;
+                        subW = ctx.measureText(subVal).width;
+                    }
+                    
+                    const totalW = mainW + (subVal ? (interGap + subW) : 0);
+                    // 强制收窄到 75% 宽度内，如果超出则缩放，不超正则保持紧凑
+                    const maxW = baseW * 0.75; 
+                    const scale = totalW > maxW ? maxW / totalW : 1.0;
+
+                    const startX = (baseW - totalW * scale) / 2;
+                    app.utils.text(ctx, mainVal, startX + (mainW * scale) / 2, 60 * unit, mainFS * scale, "#FFFFFF", "RoadGen-B");
+                    if(subVal) {
+                        const subX = startX + (mainW * scale) + (interGap * scale) + (subW * scale) / 2;
+                        app.utils.text(ctx, subVal, subX, 60 * unit + (mainFS * scale - subFS * scale) * 0.4, subFS * scale, "#FFFFFF", "RoadGen-B");
+                    }
+                }
+            },
+            name_id: {
+                name: "名称编号标识", // 修复 4: 移除编号
+                fields: [
+                    { id: 'prov', label: '省份简称', type: 'text', default: '苏' },
+                    { id: 'hwyName', label: '高速名称', type: 'text', default: '宁宣高速' },
+                    { id: 'hwyId', label: '高速编号', type: 'text', default: 'S1' },
+                    { id: 'subLabel', label: '线路角标', type: 'text', default: '' }
+                ],
+                draw: (ctx, canvas, params, app) => {
+                    const unit = app.baseSize / 100;
+                    const nameTxt = params.hwyName; const mainVal = params.hwyId; const subVal = params.subLabel;
+                    const isLong = (subVal && subVal.length > 0) || nameTxt.length > 4;
+                    const baseW = (isLong ? 160 : 125) * unit;
+                    const baseH = 120 * unit; const r = 12 * unit;
+                    canvas.width = baseW; canvas.height = baseH;
+
+                    app.utils.drawRoundedRect(ctx, 0, 0, baseW, baseH, r, app.colors.green);
+                    const bW = 3 * unit;
+                    ctx.save(); ctx.beginPath();
+                    ctx.moveTo(r, bW); ctx.lineTo(baseW - r, bW);
+                    ctx.arcTo(baseW - bW, bW, baseW - bW, bW + r, r - bW);
+                    ctx.lineTo(baseW - bW, bW + 20 * unit); ctx.lineTo(bW, bW + 20 * unit);
+                    ctx.lineTo(bW, bW + r); ctx.arcTo(bW, bW, r, bW, r - bW);
+                    ctx.fillStyle = app.colors.yellow; ctx.fill(); ctx.restore();
+
+                    ctx.save(); ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 1.5 * unit;
+                    app.utils.strokeRoundedRect(ctx, 3 * unit, 3 * unit, baseW - 6 * unit, baseH - 6 * unit, r - 3 * unit);
+                    ctx.restore();
+
+                    [params.prov||'苏', "高", "速"].forEach((char, i) => {
+                        const charX = (baseW / 2) + (i - 1) * 22 * unit;
+                        app.utils.text(ctx, char, charX, 13 * unit, 10 * unit, app.colors.black, "RoadGen-A");
+                    });
+
+                    let mainFS = 55 * unit; let subFS = mainFS * 0.5; // 修复 2: 脚标缩小
+                    ctx.font = `${mainFS}px "RoadGen-B"`;
+                    const mWidth = ctx.measureText(mainVal).width;
+                    let sWidth = 0;
+                    if(subVal) {
+                        ctx.font = `${subFS}px "RoadGen-B"`;
+                        sWidth = ctx.measureText(subVal).width;
+                    }
+                    
+                    const totalIdW = mWidth + (subVal ? (2 * unit + sWidth) : 0);
+                    const maxIdW = baseW - 30 * unit;
+                    const idScale = totalIdW > maxIdW ? maxIdW / totalIdW : 1.0;
+
+                    const idStartX = (baseW - totalIdW * idScale) / 2;
+                    app.utils.text(ctx, mainVal, idStartX + (mWidth * idScale) / 2, 53.5 * unit, mainFS * idScale, "#FFFFFF", "RoadGen-B");
+                    if(subVal) {
+                        const subX = idStartX + (mWidth * idScale) + (2 * unit * idScale) + (sWidth * idScale) / 2;
+                        app.utils.text(ctx, subVal, subX, 53.5 * unit + (mainFS * idScale - subFS * idScale) * 0.40, subFS * idScale, "#FFFFFF", "RoadGen-B");
                     }
 
-                    const startX = (baseW - totalW) / 2;
-                    app.utils.text(ctx, mainVal, startX + mainW/2, 60*unit + mainFS*0.05, mainFS, "#FFFFFF", "RoadGen-B");
-                    if(subVal) {
-                        app.utils.text(ctx, subVal, startX + mainW + 2*unit + (ctx.measureText(subVal).width)/2, 60*unit + (mainFS-subFS)*0.4 + mainFS*0.05, subFS, "#FFFFFF", "RoadGen-B");
-                    }
+                    const nameChars = nameTxt.split("");
+                    let nameSpacing = isLong ? (baseW - 40 * unit) / (nameChars.length - 1) : 20 * unit;
+                    nameChars.forEach((char, i) => {
+                        const charX = (baseW / 2) + (i - (nameChars.length - 1) / 2) * nameSpacing;
+                        app.utils.text(ctx, char, charX, 93.5 * unit, 22 * unit, "#FFFFFF", "RoadGen-A");
+                    });
                 }
             }
         }
