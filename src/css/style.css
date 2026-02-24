@@ -12,8 +12,9 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: sans-serif; height: 100vh; overflow: hidden; background: var(--bg-light); }
 
-.app-container { display: flex; height: 100vh; }
+.app-container { display: flex; height: 100vh; width: 100vw; }
 
+/* 一级导航 */
 .nav-l1 { width: 200px; background: var(--bg-dark); color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
 .logo { padding: 25px; font-weight: bold; font-size: 18px; color: var(--primary); border-bottom: 1px solid #333; }
 .nav-item { width: 100%; padding: 15px 25px; border: none; background: transparent; color: #a8abb2; text-align: left; cursor: pointer; transition: 0.2s; }
@@ -24,8 +25,9 @@ body { font-family: sans-serif; height: 100vh; overflow: hidden; background: var
 .status-ok { color: #52c41a; font-weight: bold; }
 .status-wait { color: #faad14; }
 
+/* 主内容区 */
 .app-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.nav-top { background: #fff; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 10px 20px; gap: 20px; }
+.nav-top { background: #fff; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 10px 20px; gap: 20px; flex-shrink: 0; }
 .nav-menus { flex: 1; display: flex; flex-direction: column; gap: 8px; }
 
 .tabs-l2, .tabs-l3 { display: flex; gap: 10px; }
@@ -37,11 +39,52 @@ body { font-family: sans-serif; height: 100vh; overflow: hidden; background: var
 
 .header-actions { display: flex; gap: 10px; }
 
-.workspace { flex: 1; display: flex; overflow: hidden; }
-.viewer { flex: 1; display: flex; align-items: center; justify-content: center; background: #e2e8f0; padding: 30px; overflow: hidden; }
-.canvas-holder { background: #fff; padding: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 100%; max-height: 100%; display: flex; align-items: center; justify-content: center; }
-#mainCanvas { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; }
+/* 工作区 */
+.workspace { flex: 1; display: flex; overflow: hidden; position: relative; }
 
+/* 核心修复：绝对视口隔离法 */
+.viewer { 
+    flex: 1; 
+    background: #e2e8f0; 
+    position: relative; /* 为绝对层提供基准 */
+    overflow: hidden; 
+}
+
+.canvas-stage {
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    right: 30px;
+    bottom: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.canvas-holder { 
+    background: #fff; 
+    padding: 10px; 
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15); 
+    max-width: 100%;
+    max-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+#mainCanvas { 
+    display: block; 
+    /* 强制通过 CSS 限制视觉尺寸，忽略 Canvas 属性的固有尺寸 */
+    max-width: 100%; 
+    max-height: 100%; 
+    width: auto !important; 
+    height: auto !important; 
+    object-fit: contain; 
+}
+
+/* 参数编辑区 */
 .editor { width: 280px; background: #fff; border-left: 1px solid var(--border); padding: 20px; flex-shrink: 0; overflow-y: auto; }
 .panel-title { font-weight: bold; margin-bottom: 20px; }
 .control-group { margin-bottom: 15px; }

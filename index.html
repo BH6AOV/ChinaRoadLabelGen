@@ -25,7 +25,7 @@
     </aside>
 
     <main class="app-content">
-        <!-- 多级顶部导航 -->
+        <!-- 二级顶部导航 -->
         <header class="nav-top">
             <div class="nav-menus">
                 <div id="menu-l2" class="tabs-l2"></div>
@@ -39,10 +39,12 @@
         </header>
 
         <div class="workspace">
-            <!-- 中央预览区 -->
+            <!-- 核心修复：预览区隔离 -->
             <section class="viewer">
-                <div class="canvas-holder">
-                    <canvas id="mainCanvas"></canvas>
+                <div class="canvas-stage">
+                    <div class="canvas-holder">
+                        <canvas id="mainCanvas"></canvas>
+                    </div>
                 </div>
             </section>
 
@@ -56,10 +58,8 @@
     </main>
 </div>
 
-<!-- 引入分类模版 -->
 <script src="./src/template/speed-limit.js"></script>
 <script src="./src/template/highway.js"></script>
-<!-- 核心引擎 -->
 <script src="./src/js/generator.js"></script>
 </body>
 </html>
